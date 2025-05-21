@@ -39,7 +39,6 @@ import io.cdap.cdap.etl.common.Constants;
 import io.cdap.cdap.etl.proto.ArtifactSelectorConfig;
 import io.cdap.cdap.etl.proto.connection.ConnectorDetail;
 import io.cdap.cdap.etl.proto.connection.SampleResponse;
-import io.cdap.cdap.features.Feature;
 import io.cdap.cdap.internal.io.SchemaTypeAdapter;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.wrangler.PropertyIds;
@@ -49,7 +48,6 @@ import io.cdap.wrangler.api.DirectiveLoadException;
 import io.cdap.wrangler.api.DirectiveParseException;
 import io.cdap.wrangler.api.GrammarMigrator;
 import io.cdap.wrangler.api.RecipeException;
-import io.cdap.wrangler.api.RemoteDirectiveResponse;
 import io.cdap.wrangler.api.Row;
 import io.cdap.wrangler.api.TransientVariableScope;
 import io.cdap.wrangler.parser.ConfigDirectiveContext;
@@ -79,7 +77,6 @@ import io.cdap.wrangler.registry.SystemDirectiveRegistry;
 import io.cdap.wrangler.schema.TransientStoreKeys;
 import io.cdap.wrangler.store.recipe.RecipeStore;
 import io.cdap.wrangler.store.workspace.WorkspaceStore;
-import io.cdap.wrangler.utils.KryoSerializer;
 import io.cdap.wrangler.utils.ObjectSerDe;
 import io.cdap.wrangler.utils.RowHelper;
 import io.cdap.wrangler.utils.SchemaConverter;
@@ -103,9 +100,6 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-
-import static io.cdap.wrangler.schema.TransientStoreKeys.INPUT_SCHEMA;
-import static io.cdap.wrangler.schema.TransientStoreKeys.OUTPUT_SCHEMA;
 
 /**
  * V2 endpoints for workspace
@@ -624,23 +618,12 @@ public class WorkspaceHandler extends AbstractDirectiveHandler {
     }
 
     RemoteDirectiveRequest directiveRequest = new RemoteDirectiveRequest(recipe, systemDirectives,
-                                                                         namespace, detail.getSampleAsBytes(),
-                                                                         TRANSIENT_STORE.get(INPUT_SCHEMA));
+                                                                         namespace, detail.getSampleAsBytes());
     RunnableTaskRequest runnableTaskRequest = RunnableTaskRequest.getBuilder(RemoteExecutionTask.class.getName())
       .withParam(GSON.toJson(directiveRequest))
-      .withNamespace(namespace)
       .build();
     byte[] bytes = getContext().runTask(runnableTaskRequest);
-    RemoteDirectiveResponse response;
-    if (Feature.WRANGLER_KRYO_SERIALIZATION.isEnabled(getContext())) {
-      response = new KryoSerializer().toRemoteDirectiveResponse(bytes);
-    } else {
-      response = new ObjectSerDe<RemoteDirectiveResponse>().toObject(bytes);
-    }
-    if (response.getOutputSchema() != null) {
-        TRANSIENT_STORE.set(TransientVariableScope.GLOBAL, OUTPUT_SCHEMA, response.getOutputSchema());
-    }
-    return response.getRows();
+    return new ObjectSerDe<List<Row>>().toObject(bytes);
   }
 
   private List<Row> getSample(SampleResponse sampleResponse) {

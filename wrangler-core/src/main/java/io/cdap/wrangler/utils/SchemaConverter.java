@@ -19,6 +19,7 @@ package io.cdap.wrangler.utils;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.cdap.api.data.schema.Schema.Field;
@@ -99,7 +100,6 @@ public final class SchemaConverter {
    * @param name name of the field
    * @param recordPrefix prefix to append at the beginning of a custom record
    * @return the schema of this object
-   * NOTE: ANY NEWLY SUPPORTED DATATYPE SHOULD ALSO BE REGISTERED IN {@link KryoSerializer}
    */
   @Nullable
   public Schema getSchema(Object value, String name, @Nullable String recordPrefix) throws RecordConvertorException {

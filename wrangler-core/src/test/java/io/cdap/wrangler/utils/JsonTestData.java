@@ -194,5 +194,4 @@ public final class JsonTestData {
     + "   }"
     + " }";
   public static final String EMPTY_OBJECT = "{ \"dividesplitdetails\":{\"type0\":[]}}";
-  public static final String NULL_OBJECT = "{ \"dividesplitdetails\":{\"type0\":null, \"type1\":0}}";
 }

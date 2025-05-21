@@ -24,9 +24,6 @@ import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
 import io.cdap.cdap.api.data.format.StructuredRecord;
 import io.cdap.cdap.api.data.schema.Schema;
-import io.cdap.cdap.api.exception.ErrorCategory;
-import io.cdap.cdap.api.exception.ErrorType;
-import io.cdap.cdap.api.exception.ErrorUtils;
 import io.cdap.cdap.api.metrics.Metrics;
 import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.api.plugin.PluginProperties;
@@ -56,7 +53,6 @@ import io.cdap.wrangler.api.DirectiveParseException;
 import io.cdap.wrangler.api.EntityCountMetric;
 import io.cdap.wrangler.api.ErrorRecord;
 import io.cdap.wrangler.api.ExecutorContext;
-import io.cdap.wrangler.api.RecipeException;
 import io.cdap.wrangler.api.RecipeParser;
 import io.cdap.wrangler.api.RecipePipeline;
 import io.cdap.wrangler.api.RecipeSymbol;
@@ -247,17 +243,9 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
           }
         }
       } catch (CompileException e) {
-        collector.addFailure(
-          String.format("Compilation error occurred, %s: %s ", e.getClass().getName(),
-            e.getMessage()), null);
+        collector.addFailure("Compilation error occurred : " + e.getMessage(), null);
       } catch (DirectiveParseException e) {
-        collector.addFailure(
-          String.format("Error parsing directive, %s: %s", e.getClass().getName(),
-            e.getMessage()), null);
-      } catch (DirectiveLoadException e) {
-        collector.addFailure(
-          String.format("Error loading directive, %s: %s", e.getClass().getName(),
-            e.getMessage()), null);
+        collector.addFailure(e.getMessage(), null);
       }
 
       // Based on the configuration create output schema.
@@ -266,22 +254,18 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
           oSchema = Schema.parseJson(config.schema);
         }
       } catch (IOException e) {
-        collector.addFailure(
-          String.format("Invalid output schema %s: %s", e.getClass().getName(), e.getMessage()),
-          null).withConfigProperty(Config.NAME_SCHEMA).withStacktrace(e.getStackTrace());
+        collector.addFailure("Invalid output schema.", null)
+          .withConfigProperty(Config.NAME_SCHEMA).withStacktrace(e.getStackTrace());
       }
 
       // Check if jexl pre-condition is not null or empty and if so compile expression.
-      if (!config.containsMacro(Config.NAME_PRECONDITION) && !config.containsMacro(
-        Config.NAME_PRECONDITION_LANGUAGE)) {
+      if (!config.containsMacro(Config.NAME_PRECONDITION) && !config.containsMacro(Config.NAME_PRECONDITION_LANGUAGE)) {
         if (PRECONDITION_LANGUAGE_JEXL.equalsIgnoreCase(config.getPreconditionLanguage())
           && checkPreconditionNotEmpty(false)) {
           try {
             new Precondition(config.getPreconditionJEXL());
           } catch (PreconditionException e) {
-            collector.addFailure(String.format("Error compiling precondition expression, %s: %s",
-                e.getClass().getName(), e.getMessage()), null)
-              .withConfigProperty(Config.NAME_PRECONDITION);
+            collector.addFailure(e.getMessage(), null).withConfigProperty(Config.NAME_PRECONDITION);
           }
         }
       }
@@ -290,10 +274,11 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
       if (oSchema != null) {
         configurer.getStageConfigurer().setOutputSchema(oSchema);
       }
+
     } catch (Exception e) {
+      LOG.error(e.getMessage());
       collector.addFailure("Error occurred : " + e.getMessage(), null).withStacktrace(e.getStackTrace());
     }
-    collector.getOrThrowException();
   }
 
   /**
@@ -334,14 +319,7 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
     // Parse the recipe and extract all the instances of directives
     // to be processed for extracting lineage.
     RecipeParser recipe = getRecipeParser(context);
-    List<Directive> directives;
-    try {
-      directives = recipe.parse();
-    } catch (Exception e) {
-      String errorReason = "Unable to parse recipe and extract all instances of directives.";
-      throw WranglerErrorUtil.getProgramFailureExceptionDetailsFromChain(e, errorReason, null,
-          ErrorType.USER);
-    }
+    List<Directive> directives = recipe.parse();
     emitDirectiveMetrics(directives, context.getMetrics());
 
     LineageOperations lineageOperations = new LineageOperations(input, output, directives);
@@ -366,13 +344,11 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
     // Based on the configuration create output schema.
     try {
       oSchema = Schema.parseJson(config.schema);
-    } catch (Exception e) {
-      String errorReason = "Invalid output schema format.";
-      String errorMessage = String.format(
-          "Format of output schema specified is invalid. Please check the format. %s: %s",
-          e.getClass().getName(), e.getMessage());
-      throw WranglerErrorUtil.getProgramFailureExceptionDetailsFromChain(e, errorReason,
-          errorMessage, ErrorType.USER);
+    } catch (IOException e) {
+      throw new IllegalArgumentException(
+        String.format("Stage:%s - Format of output schema specified is invalid. Please check the format.",
+                      context.getStageName()), e
+      );
     }
 
     // Check if jexl pre-condition is not null or empty and if so compile expression.
@@ -381,10 +357,8 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
         && checkPreconditionNotEmpty(false)) {
         try {
           condition = new Precondition(config.getPreconditionJEXL());
-        } catch (Exception e) {
-          String errorReason = "Failed to evaluate precondition due to an invalid JEXL expression.";
-          throw WranglerErrorUtil.getProgramFailureExceptionDetailsFromChain(e, errorReason, null,
-              ErrorType.USER);
+        } catch (PreconditionException e) {
+          throw new IllegalArgumentException(e.getMessage(), e);
         }
       }
     }
@@ -393,12 +367,7 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
       // Create the pipeline executor with context being set.
       pipeline = new RecipePipelineExecutor(recipe, ctx);
     } catch (Exception e) {
-      String errorReason = "Unable to compile the recipe and execute directives.";
-      String errorMessage = String.format(
-          "Error compiling the recipe and executing directives. " + "%s: %s",
-          e.getClass().getName(), e.getMessage());
-      throw WranglerErrorUtil.getProgramFailureExceptionDetailsFromChain(e, errorReason,
-          errorMessage, ErrorType.USER);
+      throw new Exception(String.format("Stage:%s - %s", getContext().getStageName(), e.getMessage()), e);
     }
 
     String defaultStrategy = context.getArguments().get(ERROR_STRATEGY_DEFAULT);
@@ -468,11 +437,8 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
         }
         if (WRANGLER_FAIL_PIPELINE_FOR_ERROR.isEnabled(getContext())
             && onErrorStrategy.equalsIgnoreCase(ON_ERROR_FAIL_PIPELINE)) {
-          String errorReason = String.format("Errors in Wrangler Transformation - %s",
-              errorMessages);
-          throw ErrorUtils.getProgramFailureException(
-              new ErrorCategory(ErrorCategory.ErrorCategoryEnum.PLUGIN), errorReason, errorReason,
-              ErrorType.UNKNOWN, false, null);
+          throw new Exception(
+              String.format("Errors in Wrangler Transformation - %s", errorMessages));
         }
       }
     } catch (Exception e) {
@@ -491,12 +457,8 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
                                    getContext().getStageName(), e.getMessage()),
           "value", String.valueOf(errorCounter)
         ));
-        String errorReason = "Error occurred while processing input data, possibly due to invalid "
-            + "transformation or schema mismatch.";
-        String errorMessage = String.format("Pipeline failed at stage:%s, %s: %s",
-            getContext().getStageName(), e.getClass().getName(), e.getMessage());
-        throw WranglerErrorUtil.getProgramFailureExceptionDetailsFromChain(e, errorReason,
-            errorMessage, ErrorType.UNKNOWN);
+        throw new Exception(String.format("Stage:%s - Failing pipeline due to error : %s",
+                                          getContext().getStageName(), e.getMessage()), e);
       }
       // If it's 'skip-on-error' we continue processing and don't emit any error records.
       return;
@@ -591,29 +553,18 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
    * @throws DirectiveLoadException
    * @throws DirectiveParseException
    */
-  private RecipeParser getRecipeParser(StageContext context) {
+  private RecipeParser getRecipeParser(StageContext context)
+    throws DirectiveLoadException, DirectiveParseException {
 
     registry = new CompositeDirectiveRegistry(SystemDirectiveRegistry.INSTANCE, new UserDirectiveRegistry(context));
-    try {
-      registry.reload(context.getNamespace());
-    } catch (Exception e) {
-      String errorReason = "Unable to load directive from the artifacts.";
-      throw WranglerErrorUtil.getProgramFailureExceptionDetailsFromChain(e, errorReason, null,
-          ErrorType.USER);
-    }
+    registry.reload(context.getNamespace());
 
     String directives = config.getDirectives();
     if (config.getUDDs() != null && !config.getUDDs().trim().isEmpty()) {
       directives = String.format("#pragma load-directives %s;%s", config.getUDDs(), config.getDirectives());
     }
 
-    try {
-      return new GrammarBasedParser(context.getNamespace(), new MigrateToV2(directives).migrate(), registry);
-    } catch (Exception e) {
-      String errorReason = "Unable to parse the directives.";
-      throw WranglerErrorUtil.getProgramFailureExceptionDetailsFromChain(e, errorReason, null,
-          ErrorType.USER);
-    }
+    return new GrammarBasedParser(context.getNamespace(), new MigrateToV2(directives).migrate(), registry);
   }
 
   @Override
@@ -622,10 +573,7 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
             && checkPreconditionNotEmpty(true)) {
 
       if (!Feature.WRANGLER_PRECONDITION_SQL.isEnabled(relationalTranformContext)) {
-        String errorReason = "SQL Precondition feature is not available";
-        throw ErrorUtils.getProgramFailureException(
-            new ErrorCategory(ErrorCategory.ErrorCategoryEnum.PLUGIN), errorReason, errorReason,
-            ErrorType.SYSTEM, false, null);
+        throw new RuntimeException("SQL Precondition feature is not available");
       }
 
       Optional<ExpressionFactory<String>> expressionFactory = getExpressionFactory(relationalTranformContext);
@@ -650,18 +598,11 @@ public class Wrangler extends Transform<StructuredRecord, StructuredRecord> impl
    * @param directives a list of Wrangler directives
    * @param metrics CDAP {@link Metrics} object using which metrics can be emitted
    */
-  private void emitDirectiveMetrics(List<Directive> directives, Metrics metrics) {
+  private void emitDirectiveMetrics(List<Directive> directives, Metrics metrics) throws DirectiveLoadException {
     for (Directive directive : directives) {
       // skip emitting metrics if the directive is not system directive
-      try {
-        if (registry.get(Contexts.SYSTEM, directive.define().getDirectiveName()) == null) {
-          continue;
-        }
-      } catch (Exception e) {
-        String errorReason = String.format("Unable to load directive %s",
-            directive.define().getDirectiveName());
-        throw WranglerErrorUtil.getProgramFailureExceptionDetailsFromChain(e, errorReason, null,
-            ErrorType.USER);
+      if (registry.get(Contexts.SYSTEM, directive.define().getDirectiveName()) == null) {
+        continue;
       }
       List<EntityCountMetric> countMetrics = new ArrayList<>();
 

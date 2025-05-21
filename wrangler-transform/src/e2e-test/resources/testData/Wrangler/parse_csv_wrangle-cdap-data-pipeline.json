@@ -3,7 +3,7 @@
     "description": "Data Pipeline Application",
     "artifact": {
         "name": "cdap-data-pipeline",
-        "version": "[6.0.0, 7.0.0)",
+        "version": "6.10.0-SNAPSHOT",
         "scope": "SYSTEM"
     },
     "config": {
@@ -37,7 +37,9 @@
                     "type": "batchsource",
                     "label": "BigQueryTable",
                     "artifact": {
-                        "name": "google-cloud"
+                        "name": "google-cloud",
+                        "version": "0.23.0-SNAPSHOT",
+                        "scope": "SYSTEM"
                     },
                     "properties": {
                         "useConnection": "false",
@@ -74,7 +76,9 @@
                     "type": "transform",
                     "label": "Wrangler",
                     "artifact": {
-                        "name": "wrangler-transform"
+                        "name": "wrangler-transform",
+                        "version": "4.10.0-SNAPSHOT",
+                        "scope": "SYSTEM"
                     },
                     "properties": {
                         "directives": "parse-as-csv :body ',' false\nrename body_1 new_id\nquantize body_4 body_q 1:2=20,3:4=40\nset-type :body_4 integer \ncolumns-replace s/^new_//g\nfill-null-or-empty :body_3 'shubh'\nset-headers :abc\nchange-column-case uppercase\ncleanse-column-names\nsplit-to-rows :id '#'",
@@ -115,7 +119,9 @@
                     "type": "batchsink",
                     "label": "BigQuery2",
                     "artifact": {
-                        "name": "google-cloud"
+                        "name": "google-cloud",
+                        "version": "0.23.0-SNAPSHOT",
+                        "scope": "SYSTEM"
                     },
                     "properties": {
                         "useConnection": "false",

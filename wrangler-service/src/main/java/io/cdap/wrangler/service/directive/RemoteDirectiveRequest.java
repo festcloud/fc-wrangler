@@ -15,7 +15,6 @@
  */
 package io.cdap.wrangler.service.directive;
 
-import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.wrangler.parser.DirectiveClass;
 
 import java.util.HashMap;
@@ -30,15 +29,13 @@ public class RemoteDirectiveRequest {
   private final Map<String, DirectiveClass> systemDirectives;
   private final String pluginNameSpace;
   private final byte[] data;
-  private final Schema inputSchema;
 
   RemoteDirectiveRequest(String recipe, Map<String, DirectiveClass> systemDirectives,
-                         String pluginNameSpace, byte[] data, Schema inputSchema) {
+                         String pluginNameSpace, byte[] data) {
     this.recipe = recipe;
     this.systemDirectives = new HashMap<>(systemDirectives);
     this.pluginNameSpace = pluginNameSpace;
     this.data = data;
-    this.inputSchema = inputSchema;
   }
 
   public String getRecipe() {
@@ -55,9 +52,5 @@ public class RemoteDirectiveRequest {
 
   public String getPluginNameSpace() {
     return pluginNameSpace;
-  }
-
-  public Schema getInputSchema() {
-    return inputSchema;
   }
 }

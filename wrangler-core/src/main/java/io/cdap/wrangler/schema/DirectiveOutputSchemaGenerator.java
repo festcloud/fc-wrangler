@@ -103,9 +103,6 @@ public class DirectiveOutputSchemaGenerator {
         outputFields.add(Schema.Field.of(fieldName, Schema.of(Schema.Type.NULL)));
       }
     }
-    if (outputFields.isEmpty()) {
-      return null;
-    }
     return Schema.recordOf("output", outputFields);
   }
 
