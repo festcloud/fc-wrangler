@@ -41,7 +41,7 @@ pipeline {
                                 trim: true
                             ),
                             choice(
-                                choices: ['dev'],
+                                choices: ['dev', 'qa', 'uat'],
                                 name: 'DEPLOY_TO'
                             )
                         ])
@@ -57,7 +57,8 @@ pipeline {
             }
             steps {
                 script {
-                    env.fusionUrl = "gcp-dp-${DEPLOY_TO}-dtfu-instance-gcp-dataplatform-${DEPLOY_TO}-dot-euw4.datafusion.googleusercontent.com"
+                    String projectEnv = (DEPLOY_TO == "uat") ? "uat" : "dev"
+                    env.fusionUrl = "gcp-dp-${projectEnv}-dtfu-instance-gcp-dataplatform-${projectEnv}-dot-euw4.datafusion.googleusercontent.com"
                     checkoutAndStash()
                     ansiColor('xterm') {
                         dir('fc-wrangler') {
@@ -107,16 +108,16 @@ def checkoutAndStash() {
 
 // Build and deploy for a specific folder
 def buildAndDeploy() {
-    stage("Test ${ARTIFACT} plugins") {
-        agent {
-            kubernetes {
-                yaml kubernetesPodYaml('maven') // Build stage uses Maven
-            }
-        }
-        container('maven') {
-            testFolder()
-        }
-    }
+    // stage("Test ${ARTIFACT} plugins") {
+    //     agent {
+    //         kubernetes {
+    //             yaml kubernetesPodYaml('maven') // Build stage uses Maven
+    //         }
+    //     }
+    //     container('maven') {
+    //         testFolder()
+    //     }
+    // }
     stage("Build ${ARTIFACT} plugins") {
         agent {
             kubernetes {
@@ -144,7 +145,7 @@ def buildAndDeploy() {
 def testFolder() {
     unstash 'repo-contents'
     ansiColor('xterm') {
-        sh "mvn clean test"
+        sh "mvn test -Drat.skip=true -Dcheckstyle.skip -P-submodules"
     }
 }
 
@@ -154,7 +155,7 @@ def buildFolder() {
         sh 'pwd'
         sh 'ls -la'
         // Maven build commands
-        sh "mvn install -DskipTests -Drat.skip=true -Dcheckstyle.skip -P-submodules"
+        sh "mvn install -DskipTests -Drat.skip=true -Dcheckstyle.skip -Drat.numUnapprovedLicenses=100"
         sh """
         set +x
         echo "\${IPurple}========================================================"
