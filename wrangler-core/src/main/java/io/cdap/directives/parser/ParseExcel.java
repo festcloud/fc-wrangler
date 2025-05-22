@@ -42,7 +42,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFDateUtil;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
@@ -102,7 +101,6 @@ public class ParseExcel implements Directive, Lineage {
     throws DirectiveExecutionException, ErrorRowException {
     List<Row> results = new ArrayList<>();
     ByteArrayInputStream input = null;
-    DataFormatter formatter = new DataFormatter();
     try {
       for (Row record : records) {
         int idx = record.find(column);
@@ -161,22 +159,25 @@ public class ParseExcel implements Directive, Lineage {
                 String value = "";
                 switch (cell.getCellTypeEnum()) {
                   case STRING:
+                    newRow.add(name, cell.getStringCellValue());
                     value = cell.getStringCellValue();
                     break;
 
                   case NUMERIC:
                     if (HSSFDateUtil.isCellDateFormatted(cell)) {
-                      value = formatter.formatCellValue(cell);
+                      newRow.add(name, cell.getDateCellValue());
+                      value = cell.getDateCellValue().toString();
                     } else {
+                      newRow.add(name, cell.getNumericCellValue());
                       value = String.valueOf(cell.getNumericCellValue());
                     }
                     break;
 
                   case BOOLEAN:
+                    newRow.add(name, cell.getBooleanCellValue());
                     value = String.valueOf(cell.getBooleanCellValue());
                     break;
                 }
-                newRow.add(name, value);
 
                 if (rows == 0 && firstRowAsHeader) {
                   columnNames.put(cell.getAddress().getColumn(), value);
