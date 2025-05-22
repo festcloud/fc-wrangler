@@ -16,7 +16,6 @@
 
 package io.cdap.wrangler;
 
-import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.wrangler.api.CompileException;
 import io.cdap.wrangler.api.CompileStatus;
 import io.cdap.wrangler.api.Compiler;
@@ -30,7 +29,6 @@ import io.cdap.wrangler.api.RecipeException;
 import io.cdap.wrangler.api.RecipeParser;
 import io.cdap.wrangler.api.RecipePipeline;
 import io.cdap.wrangler.api.Row;
-import io.cdap.wrangler.api.TransientVariableScope;
 import io.cdap.wrangler.api.parser.SyntaxError;
 import io.cdap.wrangler.executor.RecipePipelineExecutor;
 import io.cdap.wrangler.parser.GrammarBasedParser;
@@ -39,7 +37,6 @@ import io.cdap.wrangler.parser.RecipeCompiler;
 import io.cdap.wrangler.proto.Contexts;
 import io.cdap.wrangler.registry.CompositeDirectiveRegistry;
 import io.cdap.wrangler.registry.SystemDirectiveRegistry;
-import io.cdap.wrangler.schema.TransientStoreKeys;
 import org.junit.Assert;
 
 import java.util.Iterator;
@@ -55,21 +52,6 @@ public final class TestingRig {
   }
 
   /**
-   *
-   * @param recipe directives to be executed.
-   * @param rows input data
-   * @param inputSchema {@link Schema} of the input data
-   * @return {@link Schema} of output after transformation
-   */
-  public static Schema executeAndGetSchema(String[] recipe, List<Row> rows, Schema inputSchema)
-    throws DirectiveParseException, DirectiveLoadException, RecipeException {
-    ExecutorContext context = new TestingPipelineContext().setSchemaManagementEnabled();
-    context.getTransientStore().set(TransientVariableScope.GLOBAL, TransientStoreKeys.INPUT_SCHEMA, inputSchema);
-    execute(recipe, rows, context);
-    return context.getTransientStore().get(TransientStoreKeys.OUTPUT_SCHEMA);
-  }
-
-  /**
    * Executes the directives on the record specified.
    *
    * @param recipe to be executed.
@@ -78,7 +60,7 @@ public final class TestingRig {
    */
   public static List<Row> execute(String[] recipe, List<Row> rows)
     throws RecipeException, DirectiveParseException, DirectiveLoadException {
-    return execute(recipe, rows, new TestingPipelineContext());
+    return execute(recipe, rows, null);
   }
 
   public static List<Row> execute(String[] recipe, List<Row> rows, ExecutorContext context)
@@ -101,11 +83,11 @@ public final class TestingRig {
    */
   public static Pair<List<Row>, List<Row>> executeWithErrors(String[] recipe, List<Row> rows)
     throws RecipeException, DirectiveParseException, DirectiveLoadException, DirectiveNotFoundException {
-    return executeWithErrors(recipe, rows, new TestingPipelineContext());
+    return executeWithErrors(recipe, rows, null);
   }
 
   public static Pair<List<Row>, List<Row>> executeWithErrors(String[] recipe, List<Row> rows, ExecutorContext context)
-    throws RecipeException, DirectiveParseException {
+    throws RecipeException, DirectiveParseException, DirectiveLoadException, DirectiveNotFoundException {
     CompositeDirectiveRegistry registry = new CompositeDirectiveRegistry(
       SystemDirectiveRegistry.INSTANCE
     );
@@ -146,7 +128,7 @@ public final class TestingRig {
 
   public static void compileSuccess(String[] recipe) throws CompileException, DirectiveParseException {
     CompileStatus status = compile(recipe);
-    Assert.assertTrue(status.isSuccess());
+    Assert.assertEquals(true, status.isSuccess());
   }
 
   public static void compileFailure(String[] recipe) throws CompileException, DirectiveParseException {
@@ -157,7 +139,7 @@ public final class TestingRig {
         System.out.println(iterator.next().toString());
       }
     }
-    Assert.assertFalse(status.isSuccess());
+    Assert.assertEquals(false, status.isSuccess());
   }
 }
 

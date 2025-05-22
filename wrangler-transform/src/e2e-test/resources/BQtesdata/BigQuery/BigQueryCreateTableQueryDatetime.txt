@@ -1,1 +1,0 @@
-create table `DATASET.TABLE_NAME` (id STRING, create_date STRING, timestamp STRING)

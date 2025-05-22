@@ -47,7 +47,6 @@ import io.cdap.wrangler.store.upgrade.UpgradeState;
 import io.cdap.wrangler.store.upgrade.UpgradeStore;
 import io.cdap.wrangler.store.workspace.WorkspaceStore;
 import io.cdap.wrangler.utils.RecordConvertorException;
-import io.cdap.wrangler.utils.RowHelper;
 import io.cdap.wrangler.utils.SchemaConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,7 +155,7 @@ public class WorkspaceUpgrader {
           SchemaConverter schemaConvertor = new SchemaConverter();
           try {
             dbSchema = sample.isEmpty() ? null :
-                         schemaConvertor.toSchema("record", RowHelper.createMergedRow(sample));
+                         schemaConvertor.toSchema("record", AbstractDirectiveHandler.createUberRecord(sample));
           } catch (RecordConvertorException e) {
             LOG.warn("Unable to get the source schema for workspace {}, the generated spec will not contain schema.",
                      workspace.getName());

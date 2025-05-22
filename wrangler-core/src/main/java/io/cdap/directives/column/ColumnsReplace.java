@@ -19,14 +19,12 @@ package io.cdap.directives.column;
 import io.cdap.cdap.api.annotation.Description;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
-import io.cdap.cdap.api.data.schema.Schema;
 import io.cdap.wrangler.api.Arguments;
 import io.cdap.wrangler.api.Directive;
 import io.cdap.wrangler.api.DirectiveExecutionException;
 import io.cdap.wrangler.api.DirectiveParseException;
 import io.cdap.wrangler.api.ExecutorContext;
 import io.cdap.wrangler.api.Row;
-import io.cdap.wrangler.api.SchemaResolutionContext;
 import io.cdap.wrangler.api.annotations.Categories;
 import io.cdap.wrangler.api.lineage.Lineage;
 import io.cdap.wrangler.api.lineage.Many;
@@ -38,7 +36,6 @@ import org.unix4j.Unix4j;
 import org.unix4j.builder.Unix4jCommandBuilder;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Applies a sed expression on the column names.
@@ -76,7 +73,8 @@ public class ColumnsReplace implements Directive, Lineage {
       for (int i = 0; i < row.width(); ++i) {
         String name = row.getColumn(i);
         try {
-          row.setColumn(i, getSedReplacedColumnName(name));
+          Unix4jCommandBuilder builder = Unix4j.echo(name).sed(sed);
+          row.setColumn(i, builder.toStringResult());
         } catch (IllegalArgumentException e) {
           throw new DirectiveExecutionException(NAME, e.getMessage(), e);
         }
@@ -92,22 +90,5 @@ public class ColumnsReplace implements Directive, Lineage {
       .all(Many.of())
       .build();
   }
-
-  @Override
-  public Schema getOutputSchema(SchemaResolutionContext context) {
-    Schema inputSchema = context.getInputSchema();
-    return Schema.recordOf(
-      "outputSchema",
-      inputSchema.getFields().stream()
-        .map(
-          field -> Schema.Field.of(getSedReplacedColumnName(field.getName()), field.getSchema())
-        )
-        .collect(Collectors.toList())
-    );
-  }
-
-  private String getSedReplacedColumnName(String colName) {
-    Unix4jCommandBuilder builder = Unix4j.echo(colName).sed(sed);
-    return builder.toStringResult();
-  }
 }
+
