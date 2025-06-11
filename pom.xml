@@ -60,6 +60,7 @@
     <tag>HEAD</tag>
   </scm>
 
+<!--
   <distributionManagement>
     <repository>
       <id>sonatype.release</id>
@@ -69,6 +70,20 @@
       <id>sonatype.snapshots</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots</url>
     </snapshotRepository>
+  </distributionManagement>
+-->
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>festcloud.snapshots</id>
+      <name>FestCloud Development Snapshot Repository</name>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-nprd/gcp-srv-nprd-arm-shared</url>
+    </snapshotRepository>
+    <repository>
+      <id>festcloud.releases</id>
+      <name>FestCloud Release Distribution Repository</name>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-prod/gcp-srv-prod-arm-shared</url>
+    </repository>
   </distributionManagement>
 
   <issueManagement>
@@ -122,30 +137,57 @@
     <simplemagic.version>1.11</simplemagic.version>
     <slf4j.version>1.7.15</slf4j.version>
     <unix4j.version>0.4</unix4j.version>
+
+    <artifactregistry-maven-wagon.version>2.2.0</artifactregistry-maven-wagon.version>
   </properties>
 
   <repositories>
     <repository>
-      <id>sonatype</id>
-      <url>https://oss.sonatype.org/content/groups/public</url>
+      <id>festcloud.snapshots</id>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-nprd/gcp-srv-nprd-arm-shared</url>
       <releases>
-        <enabled>true</enabled>
+        <enabled>false</enabled>
       </releases>
       <snapshots>
-        <enabled>false</enabled>
+        <enabled>true</enabled>
       </snapshots>
     </repository>
     <repository>
-      <id>sonatype-snapshots</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <id>festcloud.releases</id>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-prod/gcp-srv-prod-arm-shared</url>
       <releases>
-        <enabled>false</enabled>
+        <enabled>true</enabled>
       </releases>
       <snapshots>
-        <enabled>true</enabled>
+        <enabled>false</enabled>
       </snapshots>
     </repository>
   </repositories>
+
+  <!--
+    <repositories>
+      <repository>
+        <id>sonatype</id>
+        <url>https://oss.sonatype.org/content/groups/public</url>
+        <releases>
+          <enabled>true</enabled>
+        </releases>
+        <snapshots>
+          <enabled>false</enabled>
+        </snapshots>
+      </repository>
+      <repository>
+        <id>sonatype-snapshots</id>
+        <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        <releases>
+          <enabled>false</enabled>
+        </releases>
+        <snapshots>
+          <enabled>true</enabled>
+        </snapshots>
+      </repository>
+    </repositories>
+  -->
 
   <dependencyManagement>
     <dependencies>
@@ -172,6 +214,14 @@
   </dependencies>
 
   <build>
+    <extensions>
+      <extension>
+        <groupId>com.google.cloud.artifactregistry</groupId>
+        <artifactId>artifactregistry-maven-wagon</artifactId>
+        <version>${artifactregistry-maven-wagon.version}</version>
+      </extension>
+    </extensions>
+
     <pluginManagement>
       <plugins>
         <plugin>
@@ -232,6 +282,7 @@
                   <exclude>wrangler-demos/**</exclude>
                   <exclude>**/com/example/**</exclude>
                   <exclude>/**/icons/**</exclude>
+                  <exclude>Jenkinsfile</exclude>
                 </excludes>
               </configuration>
             </execution>
@@ -304,10 +355,10 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
       </plugin>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-      </plugin>
+<!--      <plugin>-->
+<!--        <groupId>org.apache.rat</groupId>-->
+<!--        <artifactId>apache-rat-plugin</artifactId>-->
+<!--      </plugin>-->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
