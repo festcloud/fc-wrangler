@@ -77,12 +77,12 @@
     <snapshotRepository>
       <id>festcloud.snapshots</id>
       <name>FestCloud Development Snapshot Repository</name>
-      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-nprd/gcp-srv-nprd-arm-shared</url>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-shared-srv-w8y7/gcp-shared-srv-w8y7-ar-maven-snapshots</url>
     </snapshotRepository>
     <repository>
       <id>festcloud.releases</id>
       <name>FestCloud Release Distribution Repository</name>
-      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-prod/gcp-srv-prod-arm-shared</url>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-shared-srv-w8y7/gcp-shared-srv-w8y7-ar-maven-releases</url>
     </repository>
   </distributionManagement>
 
@@ -144,7 +144,7 @@
   <repositories>
     <repository>
       <id>festcloud.snapshots</id>
-      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-nprd/gcp-srv-nprd-arm-shared</url>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-shared-srv-w8y7/gcp-shared-srv-w8y7-ar-maven-snapshots</url>
       <releases>
         <enabled>false</enabled>
       </releases>
@@ -154,6 +154,26 @@
     </repository>
     <repository>
       <id>festcloud.releases</id>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-shared-srv-w8y7/gcp-shared-srv-w8y7-ar-maven-releases</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>festcloud.snapshots.nprd</id>
+      <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-nprd/gcp-srv-nprd-arm-shared</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>festcloud.releases.prod</id>
       <url>artifactregistry://europe-west4-maven.pkg.dev/gcp-srv-prod/gcp-srv-prod-arm-shared</url>
       <releases>
         <enabled>true</enabled>
